@@ -1,6 +1,5 @@
-import { db } from "@/utils/dbConnections";
+import { db } from "@/utils/dbConnection";
 import cookTimeValidation from "@/utils/cookTimeValidation";
-//todo: Check the notes column in table to ensure it is able to take NULL and then do validation here
 
 //GET route
 export async function GET() {
@@ -73,7 +72,7 @@ export async function POST(req) {
     }
     let validated_cook_time;
     //function to validate time
-    cookTimeValidation(cook_time);
+    validated_cook_time = cookTimeValidation(cook_time);
     //notes are optional
 
     await db.query("BEGIN");
@@ -86,8 +85,20 @@ export async function POST(req) {
     );
     let recipe_id = recipe_result.rows[0].id;
     for (const ingredient of ingredients) {
+      if (
+        typeof ingredient.quantity !== "number" ||
+        Number.isNaN(ingredient.quantity)
+      ) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Quantity must be a number`,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
       //ensure all ingredients are always lowercase to make handling duplicates easier
-      let ing = ingredient.toLowerCase().trim();
+      let ingName = ingredient.name?.toLowerCase().trim();
       //Database checks if an ingredient exists, returns id of ingredient.
       let result = await db.query(
         `
@@ -96,7 +107,7 @@ export async function POST(req) {
         ON CONFLICT(name)
         DO UPDATE SET name = EXCLUDED.name
         RETURNING id`,
-        [ing.name],
+        [ingName],
       );
       let ingredient_id = result.rows[0].id;
       await db.query(
@@ -104,7 +115,7 @@ export async function POST(req) {
         INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit)
         VALUES($1, $2, $3, $4)
         RETURNING *`,
-        [recipe_id, ingredient_id, ing.quantity, ing.unit],
+        [recipe_id, ingredient_id, ingredient.quantity, ingredient.unit],
       );
     }
 
