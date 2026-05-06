@@ -1,29 +1,37 @@
-export default function IngredientsForm({ index }) {
+"use client";
+export default function IngredientsForm({ index, handleChange }) {
   return (
     <div>
-      <label htmlFor={`ingredientName-${index}`}>Ingredient: </label>
+      <label htmlFor="name">Ingredient: </label>
       <input
         type="text"
-        id={`ingredientName-${index}`}
-        name={`ingredientName-${index}`}
+        id="name"
+        name="name"
         required
+        onChange={(e) => handleChange(index, e)}
       />
-      <label htmlFor={`quantity-${index}`}>Quantity: </label>
+      <label htmlFor="quantity">Quantity: </label>
       <input
         type="number"
-        min="0.1"
-        id={`quantity-${index}`}
-        name={`quantity-${index}`}
+        id="quantity"
+        name="quantity"
         required
+        onChange={(e) => handleChange(index, e)}
       ></input>
-      <label htmlFor={`unit-${index}`}>Unit: </label>
-      <select id={`unit-${index}`} name={`unit-${index}`} required>
-        <option disabled value="">
+      <label htmlFor="unit">Unit: </label>
+      <select
+        id="unit"
+        name="unit"
+        required
+        onChange={(e) => handleChange(index, e)}
+        defaultValue={"DEFAULT"}
+      >
+        <option value="DEFAULT" disabled hidden>
           Select
         </option>
         <option value="grams">grams</option>
         <option value="kg">kg</option>
-        <option value="ml">Ml</option>
+        <option value="ml">ml</option>
         <option value="litre">litre</option>
         <option value="floz">fl oz</option>
         <option value="oz">oz</option>

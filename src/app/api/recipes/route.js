@@ -122,9 +122,9 @@ export async function POST(req) {
     await db.query("COMMIT");
 
     return new Response(
-      JSON.stringify({ success: true, data: recipe_result.rows[0].name }),
+      JSON.stringify({ success: true, data: recipe_result.rows[0] }),
       {
-        status: 200,
+        status: 201,
         headers: { "Content-Type": "application/json" },
       },
     );

@@ -6,5 +6,5 @@ import { db } from "@/utils/dbConnection";
 //edit pantry
 export async function PATCH(req, { params }) {
   //update pantry
-  const { id } = await params;
+  const { user_id } = await params;
 }
