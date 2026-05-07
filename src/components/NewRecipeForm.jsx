@@ -1,7 +1,9 @@
+//Form for creating a recipe, handleSubmit calls CreateRecipe action that fetches POST route.
+
 "use client";
 import { useState } from "react";
 import IngredientsForm from "./IngredientsForm";
-import { createRecipe } from "@/lib/actions/CreateRecipe";
+import { CreateRecipe } from "@/lib/actions/CreateRecipe";
 
 export default function NewRecipeForm() {
   const [ingredients, setIngredients] = useState([
@@ -21,7 +23,7 @@ export default function NewRecipeForm() {
   }
 
   async function timeFormat(hours, mins) {
-    //cookTimeValidation function expects the format 1:30 for times
+    //cookTimeValidation function for POST route expects the format hh:mm for times
     const cook_time = `${hours}:${mins}`;
     return cook_time;
   }
@@ -39,12 +41,12 @@ export default function NewRecipeForm() {
       notes: formData.get("notes"),
       ingredients: ingredients,
       cook_time: await timeFormat(hours, mins),
-      //this user_id will be from auth when set up, for testing I am setting it to 1
+      //!this user_id will be from auth when set up, for testing I am setting it to 1
       user_id: 1,
     };
     console.log(body);
     try {
-      await createRecipe(body);
+      await CreateRecipe(body);
     } catch (err) {
       alert(`Error: ${err.message}`);
     }

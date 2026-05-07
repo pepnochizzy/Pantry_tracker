@@ -1,4 +1,6 @@
-export async function createRecipeCall(body) {
+//fetches POST route
+
+export async function CreateRecipeCall(body) {
   const res = await fetch(`/api/recipes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

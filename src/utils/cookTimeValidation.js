@@ -1,3 +1,5 @@
+//for normalising and validating cook time
+
 export default function cookTimeValidation(cook_time) {
   let validated_cook_time;
   if (typeof cook_time === "string" && cook_time.includes(":")) {

@@ -1,3 +1,5 @@
+//For ingredients only, this form enables forms to be created as needed by user.
+
 "use client";
 export default function IngredientsForm({ index, handleChange }) {
   return (
@@ -43,7 +45,9 @@ export default function IngredientsForm({ index, handleChange }) {
         <option value="tbsp">tbsp</option>
         <option value="pinch">pinch</option>
         <option value="sprig">sprig</option>
-        <option value="can">can</option>
+        <option value="can">can/tin</option>
+        <option value="whole">whole</option>
+        <option value="clove">clove</option>
       </select>
     </div>
   );

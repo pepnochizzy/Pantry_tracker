@@ -1,3 +1,5 @@
+//Routes that do not require params: GET, POST
+
 import { db } from "@/utils/dbConnection";
 import cookTimeValidation from "@/utils/cookTimeValidation";
 

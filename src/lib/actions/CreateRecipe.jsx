@@ -1,6 +1,8 @@
-import { createRecipeCall } from "../api/recipes";
+//For IngredientsForm component. Calls createRecipeCall
 
-export async function createRecipe(body) {
+import { CreateRecipeCall } from "../api/recipes";
+
+export async function CreateRecipe(body) {
   try {
     return await createRecipeCall(body);
   } catch (err) {
