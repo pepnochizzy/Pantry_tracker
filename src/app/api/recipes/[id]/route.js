@@ -1,55 +1,57 @@
 import { db } from "@/utils/dbConnection";
 import cookTimeValidation from "@/utils/cookTimeValidation";
 
-//GET route
-export async function GET() {
-  try {
-    const res = await db.query(`SELECT * FROM recipes ORDER BY name`);
-    //handle empty db
-    const result = res.rows || [];
+export async function DELETE(req, { params }) {
+  //only needs to delete from recipe and recipe_ingredient table, ingredients can stay.
+  //implementing cascade in database
+  const { id } = await params;
+  console.log("Deleting recipe with id:", id);
 
-    return new Response(JSON.stringify({ success: true, data: result }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    console.error("Failed to fetch recipes:", err);
+  try {
+    const data = await db.query(
+      `
+        DELETE FROM recipes WHERE id = $1
+        RETURNING *`,
+      [id],
+    );
+    if (data.rowCount === 0) {
+      return new Response(
+        JSON.stringify(
+          { success: false, error: "Recipe not found, cannot delete" },
+          { status: 404 },
+        ),
+      );
+    }
     return new Response(
-      JSON.stringify({ success: false, error: "Failed to fetch task" }),
+      JSON.stringify({ success: true, data: `Rows deleted: ${data.rowCount}` }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  } catch (err) {
+    console.error("Failed to delete recipes and related content:", err);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Failed to to delete recipes and related content",
+      }),
       { status: 500, headers: { "Content-type": "application/json" } },
     );
   }
 }
 
-//create new recipe
-export async function POST(req) {
+export async function PATCH(req, { params }) {
+  //update recipe
+  //! as of right now, I am using user_id from client. When auth is set up use it from session/auth for safety.
+  const { id } = await params;
+  console.log("Updating recipe with id:", id);
+
   try {
     const body = await req.json();
     const { user_id, ingredients, recipe_name, cook_time, notes } = body;
 
-    //ingredients = array
-
-    //handle empty values
-    if (!user_id) {
-      //although this should have been caught before adding a new recipe, we want it to be secure.
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Must be logged in to add a recipe`,
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    if (ingredients.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Ingredients are required`,
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
+    //validation
 
     if (!recipe_name || recipe_name.trim() === "") {
       return new Response(
@@ -75,15 +77,17 @@ export async function POST(req) {
     validated_cook_time = cookTimeValidation(cook_time);
     //notes are optional
 
-    await db.query("BEGIN");
+    if (!Array.isArray(ingredients) || ingredients.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Ingredients are required",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
-    let recipe_result = await db.query(
-      `INSERT INTO recipes (name, cook_time, notes, user_id)
-       VALUES ($1, $2, $3, $4) 
-       RETURNING *`,
-      [recipe_name, validated_cook_time, notes, user_id],
-    );
-    let recipe_id = recipe_result.rows[0].id;
+    const validated_ingredients = [];
     for (const ingredient of ingredients) {
       if (
         typeof ingredient.quantity !== "number" ||
@@ -99,7 +103,33 @@ export async function POST(req) {
       }
       //ensure all ingredients are always lowercase to make handling duplicates easier
       let ingName = ingredient.name?.toLowerCase().trim();
-      //Database checks if an ingredient exists, returns id of ingredient.
+      validated_ingredients.push({
+        name: ingName,
+        quantity: ingredient.quantity,
+        unit: ingredient.unit,
+      });
+    }
+    await db.query("BEGIN");
+
+    let recipe_result = await db.query(
+      `
+      UPDATE recipes SET
+      name = $1,
+      cook_time = $2,
+      notes = $3,
+      user_id = $4
+      WHERE id = $5
+      RETURNING *`,
+      [recipe_name, validated_cook_time, notes, user_id, id],
+    );
+    let recipe_id = recipe_result.rows[0].id;
+
+    await db.query(`DELETE FROM recipe_ingredients WHERE recipe_id = $1`, [
+      recipe_id,
+    ]);
+
+    //ingredients
+    for (const ingredient of validated_ingredients) {
       let result = await db.query(
         `
         INSERT INTO ingredients (name) 
@@ -107,7 +137,7 @@ export async function POST(req) {
         ON CONFLICT(name)
         DO UPDATE SET name = EXCLUDED.name
         RETURNING id`,
-        [ingName],
+        [ingredient.name],
       );
       let ingredient_id = result.rows[0].id;
       await db.query(
@@ -118,9 +148,7 @@ export async function POST(req) {
         [recipe_id, ingredient_id, ingredient.quantity, ingredient.unit],
       );
     }
-
     await db.query("COMMIT");
-
     return new Response(
       JSON.stringify({ success: true, data: recipe_result.rows[0].name }),
       {
@@ -131,9 +159,9 @@ export async function POST(req) {
   } catch (err) {
     await db.query("ROLLBACK");
 
-    console.error("Failed to create recipe:", err);
+    console.error("Failed to update recipe:", err);
     return new Response(
-      JSON.stringify({ success: false, error: "Failed to create new recipe" }),
+      JSON.stringify({ success: false, error: "Failed to update recipe" }),
       { status: 500, headers: { "Content-type": "application/json" } },
     );
   }
