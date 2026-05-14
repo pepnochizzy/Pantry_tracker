@@ -2,6 +2,7 @@
 
 import { db } from "@/utils/dbConnection";
 import cookTimeValidation from "@/utils/cookTimeValidation";
+import { ValidationError } from "@/utils/ValidationError";
 
 //GET route
 export async function GET() {
@@ -63,7 +64,7 @@ export async function POST(req) {
       );
     }
 
-    if (!cook_time) {
+    if (!cook_time || cook_time === "") {
       return new Response(
         JSON.stringify({
           success: false,
@@ -77,16 +78,19 @@ export async function POST(req) {
     validated_cook_time = cookTimeValidation(cook_time);
     //notes are optional
 
-    await db.query("BEGIN");
-
-    let recipe_result = await db.query(
-      `INSERT INTO recipes (name, cook_time, notes, user_id)
-       VALUES ($1, $2, $3, $4) 
-       RETURNING *`,
-      [recipe_name, validated_cook_time, notes, user_id],
-    );
-    let recipe_id = recipe_result.rows[0].id;
+    //validating ingredients
+    //TODO requires thorough quantity validation when this is normalised in frontend
     for (const ingredient of ingredients) {
+      if (!ingredient.quantity) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Ingredients must have a quantity`,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
       if (
         typeof ingredient.quantity !== "number" ||
         Number.isNaN(ingredient.quantity)
@@ -99,6 +103,36 @@ export async function POST(req) {
           { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
+      if (!ingredient.name || ingredient.name.trim() === "") {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Ingredients must have a name`,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (!ingredient.unit || ingredient.unit.trim() === "") {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Ingredients must have a valid unit`,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    await db.query("BEGIN");
+
+    let recipe_result = await db.query(
+      `INSERT INTO recipes (name, cook_time, notes, user_id)
+       VALUES ($1, $2, $3, $4) 
+       RETURNING *`,
+      [recipe_name, validated_cook_time, notes, user_id],
+    );
+    let recipe_id = recipe_result.rows[0].id;
+    for (const ingredient of ingredients) {
       //ensure all ingredients are always lowercase to make handling duplicates easier
       let ingName = ingredient.name?.toLowerCase().trim();
       //Database checks if an ingredient exists, returns id of ingredient.
@@ -131,7 +165,21 @@ export async function POST(req) {
       },
     );
   } catch (err) {
-    await db.query("ROLLBACK");
+    if (err instanceof ValidationError) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: err.message,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    try {
+      await db.query("ROLLBACK");
+    } catch (rollbackErr) {
+      console.error("Rollback failed:", rollbackErr);
+    }
 
     console.error("Failed to create recipe:", err);
     return new Response(
