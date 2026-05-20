@@ -28,3 +28,7 @@ export async function GetRecipes() {
   }
   return data.data;
 }
+
+//fetches DELETE route
+
+export async function DeleteRecipes() {}

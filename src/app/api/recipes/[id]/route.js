@@ -166,3 +166,24 @@ export async function PATCH(req, { params }) {
     );
   }
 }
+
+//GET recipe by id and all data relating to it
+export async function GET(req, { params }) {
+  const { id } = await params;
+  try {
+    const res = await db.query(`SELECT * FROM recipe_full WHERE id = $1`, [id]);
+    //handle empty db
+    const result = res.rows || [];
+
+    return new Response(JSON.stringify({ success: true, data: result }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("Failed to fetch recipe:", err);
+    return new Response(
+      JSON.stringify({ success: false, error: "Failed to fetch recipes" }),
+      { status: 500, headers: { "Content-type": "application/json" } },
+    );
+  }
+}

@@ -18,7 +18,7 @@ export async function GET() {
   } catch (err) {
     console.error("Failed to fetch recipes:", err);
     return new Response(
-      JSON.stringify({ success: false, error: "Failed to fetch task" }),
+      JSON.stringify({ success: false, error: "Failed to fetch recipes" }),
       { status: 500, headers: { "Content-type": "application/json" } },
     );
   }
