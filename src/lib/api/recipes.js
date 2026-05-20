@@ -15,3 +15,16 @@ export async function CreateRecipeCall(body) {
   const json = await res.json();
   return json.data;
 }
+
+//fetches GET route
+export async function GetRecipes() {
+  const res = await fetch(`/api/recipes`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "failed to fetch tasks");
+  }
+  return data.data;
+}
